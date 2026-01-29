@@ -1,5 +1,5 @@
 var config = {
-    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/europe/2025-08/europe_map_2025-08-19.geojson',
+    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/gas-plant/2026-01/europe_map_2026-01-28.geojson',
     geometries: ['Point','LineString'],
     center: [8, 50],
     zoomFactor: 1.9,
@@ -66,7 +66,7 @@ var config = {
         field: 'tracker-custom',
         values: {
             'GOGPT': 'MW',
-            'GOGET-oil': '',	//'million boe/y', // remove because they dont have capacity is only relevant for scaling here Scott request
+            // 'GOGET-oil': '',	//'million boe/y', // remove because they dont have capacity is only relevant for scaling here Scott request
             'GGIT': 'bcm/y of gas',
             'GGIT-import': 'MTPA of natural gas',
             'GGIT-export': 'MTPA of natural gas',            

@@ -4,7 +4,6 @@ var site_config = {
 
     /* Mapbox Base Map Style */
     mapStyle: 'mapbox://styles/gemteam1/cls98k6sf02li01p2fqtu67lc',
-
     center: [0, 0],
     projection: 'naturalEarth',
 
@@ -57,12 +56,11 @@ var site_config = {
     linkField: 'url',
 
     urlField: 'url',
-
     countryField: 'country',
     statusField: 'status',
     statusDisplayField: 'status',
-    capacityField: 'capacity',
-    capacityDisplayField: 'capacity',
+    capacityField: 'capacity', // 
+    capacityDisplayField: 'capacity', // this is what gets used in the details summary unit feature where applicable
     locationColumns:{
         lat: 'lat',
         lng: 'lng'
@@ -83,6 +81,8 @@ var site_config = {
     multiCountry: false,
 
     hitArea: 5, 
+    sqrt: true, // need this to trigger the square root interpolation circle asset sizing logic
+    geometries: ['Point'],
 
-    geometries: ['Point']
+    scale_by_capacity: true, // for gas finance where we used the unit capacity status functionality but 'Capacity' is hardcoded in for single unit projects and the value is not capacity but finance info here. displayDetails() in stie.js is where this is going to be used.
 };

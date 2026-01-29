@@ -1,5 +1,17 @@
 var config = {
-    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/gmet/2025-12/gmet_map_2026-01-16.geojson',
+    // NOTES 
+    //     DONE could the coal mines be a different color than the other layers? (i.e., seems fine to keep the pipelines and terminals the same color since they're both O&G transmission, but coal mines are hard to see)
+    //     DONECould we change "GEM Reviewed Plumes (has attribution)" to "Reviewed Plumes (has attribution info)". I know it's fiddly, but important to add some plausible deniability 
+    // between what is definitively "attributed" vs what simply "Has attribution information". Removed the GEM prefix for space
+    // 
+    
+    // the LNG terminals are missing the emissions data 
+    // "Annual methane emissions estimate at terminal 
+    // if operational: (mt/year)" 
+    // (should be included for all, not just operating terminals
+
+    
+    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/gmet/2025-12/gmet_map_2025-12-03.geojson',
     geometries: ['Point','LineString'],
     colors: {
         'red': '#c74a48',
@@ -16,15 +28,15 @@ var config = {
     color: { 
         field: 'legend-filter',
         label: 'Plume and Infrastructure Projects',
-        values: { // must have hyphen NO space
+        values: {
             // 'Plumes': 'red',
             'plumes-attrib': 'red',
             'plumes-unattrib': 'orange',
 
-            'Oil-and-Gas-Extraction-Areas': 'blue',
+            'Oil and Gas Extraction Areas': 'blue',
             // 'Oil and Gas Reserves': 'blue',
             'Pipelines': 'green',
-            'Coal-Mines---Non-closed': 'yellow',
+            'Coal Mines - Non-closed': 'yellow',
             // 'LNG Terminals': 'green'
             'lng-import': 'green',
             'lng-export': 'green',
@@ -37,7 +49,7 @@ var config = {
         {
             field: 'legend-filter',
             label: 'Plume and Infrastructure Projects',
-            values: ['Oil-and-Gas-Extraction-Areas', 'Coal-Mines---Non-closed', 'lng-import', 'lng-export', 'Pipelines','plumes-attrib', 'plumes-unattrib'],
+            values: ['Oil and Gas Extraction Areas', 'Coal Mines - Non-closed', 'lng-import', 'lng-export', 'Pipelines','plumes-attrib', 'plumes-unattrib'],
             values_labels: [
             'Oil and Gas Extraction Areas', 
             'Coal Mines', 
@@ -60,6 +72,10 @@ var config = {
 
     statusDisplayField: 'status',
     statusField: 'status-legend',
+
+    // # O&G extraction areas and coal mines by status 
+    // plumes by "has attribution information"
+    // infrastructure emissions estimates
     
     capacityField: 'scaling-capacity',
     capacityLabel: '', // for gmet that has no capacity but only emissions data
@@ -78,8 +94,8 @@ var config = {
         and designated which column has the link */
     tableHeaders: {
 
-        values: ['name', 'status','plume-emissions', 'emission-uncertainty', 'emissions-terminals', 'tonnesyr-pipes-emissions','tonnes-goget-reserves-emissions', 'mtyr-gcmt-emissions','typeinfra', 'date','subnat', 'areas','infra-name', 'geminfrawiki'],
-        labels: ['Project', 'Status','Emissions (kg/hr)', 'Emissions Uncertainty (kg/hr)', 'Methane emissions if fully operational', 'Emissions if Operational (tonnes/yr)','Potential Emissions for whole reserves (tonnes)', 'Coal Mine Methane Emissions Estimate (mt/yr)','Type of Infrastructure','Observation Date', 'Subnational', 'Country/Area(s)','Nearby Infrastructure Project Name', 'Infrastructure Wiki'],
+        values: ['name', 'status','plume-emissions', 'emission-uncertainty', 'emissions-terminals', 'tonnesyr-pipes_emissions','tonnes-goget-reserves-emissions', 'mtyr-gcmt-emissions','typeinfra', 'date','subnat', 'areas','infra-name', 'geminfrawiki'],
+        labels: ['Project', 'Status','Emissions (kg/hr)', 'Emissions Uncertainty (kg/hr)', 'Emissions terminals ggit', 'Emissions pipeline','Emissions goget', 'Emissions gcmt','Type of Infrastructure','Observation Date', 'Subnational', 'Country/Area(s)','Nearby Infrastructure Project Name', 'Infrastructure Wiki'],
         clickColumns: ['name'],
         rightAlign: ['plume-emissions','date'],
         removeLastComma: ['areas'],
@@ -91,10 +107,10 @@ var config = {
     searchFields: { 'Country/Area(s)': ['areas'],
 
         'Project Type': ['legend-filter'],
-        'Project': ['name', 'name-search', 'infra-name', 'geminfrawiki'], 
+        'Project': ['name', 'name-search'], 
         'Companies': ['operator'],
         'Type of Infrastructure': ['typeInfra'],
-        // 'Coordinates': ['geometry', 'lat', 'lng', 'coordssearch'] # this does not work so commenting out, unclear how useful without the zoomTo / fitBounds
+        // 'Coordinates': ['geometry', 'lat', 'lng']
         // 'Government Well ID': ['well_id'],
         // 'Other Government ID Assets': ['gov_assets']
 
@@ -142,7 +158,7 @@ var config = {
         'tonnes-goget-reserves-emissions': {'label': 'Potential Emissions for whole reserves (tonnes)'},
         
         // EMISSIONS LNG TERM
-        'emissions-terminals': {'label': 'Methane emissions if fully operational'},//'Annual methane emissions estimate if operational (mt/year)'},
+        'emissions-terminals': {'label': 'methane emissions (Mt/year)'},//'Annual methane emissions estimate if operational (mt/year)'},
         
         'inportexport': {'label': 'Terminal Facility Type'},
         'date': {'label': 'Observation Date'},
@@ -152,8 +168,9 @@ var config = {
         // 'geminfrawiki': {'label': 'Infrastructure Wiki'}, // or display md to just display as text md
         'areas-subnat-sat-display': {'display': 'location'}, 
         'infra-wiki-md': {'display': 'simple_markup'},
-        'carbon-mapper-md': {'display': 'simple_markup'},
-        'release-date-infra': {'display': 'simple_markup'}
+        'carbon-mapper-md': {'display': 'simple_markup'} 
+
+
     }, 
 
     linkField: 'pid',

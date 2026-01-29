@@ -9,6 +9,16 @@ function processConfig() {
         config.color.values[color_key] = config.colors[ config.color.values[color_key] ];
     });
 }
+let userInteracting = false;
+const diacriticMap = {
+    a: ["a", "á", "à", "â", "ã", "ä", "å"],
+    e: ["e", "é", "è", "ê", "ë"],
+    i: ["i", "í", "ì", "î", "ï"],
+    o: ["o", "ó", "ò", "ô", "õ", "ö", "ø"],
+    u: ["u", "ú", "ù", "û", "ü"],
+    c: ["c", "ç"],
+    n: ["n", "ñ"],
+  };
 
 /*
   Set up mapboxgljs instance, and trigger data load
@@ -280,6 +290,8 @@ function findLinkedAssets() {
         // Build summary count of filters for legend
         let summary_count = {};
         config.filters.forEach((filter) => {
+            // console.log('filter.field')
+            // console.log(filter.field)
             summary_count[filter.field] = Object.assign(...filter.values.map(f => ({[f]: 0})));
             features.forEach((feature) => {
                 summary_count[filter.field][feature.properties[filter.field]]++;
@@ -437,24 +449,32 @@ function addPointLayer() {
     }
     let interpolateExpression = ('interpolate' in config ) ? config.interpolate :  ["linear"];
     try {
-        paint['circle-radius'] = [
-            "interpolate", ["exponential", .5], ["zoom"],
-            1, ["interpolate", interpolateExpression,
-                ["to-number",["get", config.capacityField]],
-                config.minPointCapacity, config.minRadius,
-                config.maxPointCapacity, config.maxRadius
-            ],
-            10, ["interpolate", interpolateExpression,
-                ["to-number",["get", config.capacityField]],
-                config.minPointCapacity, config.highZoomMinRadius,
-                config.maxPointCapacity, config.highZoomMaxRadius
-            ],
-        ];
+        // Handle case where all capacity values are the same
+        if (config.minPointCapacity === config.maxPointCapacity) {
+            paint['circle-radius'] = [
+                "interpolate", ["exponential", .5], ["zoom"],
+                1, config.minRadius,
+                10, config.highZoomMinRadius
+            ];
+        } else {
+            paint['circle-radius'] = [
+                "interpolate", ["exponential", .5], ["zoom"],
+                1, ["interpolate", interpolateExpression,
+                    ["to-number",["get", config.capacityField]],
+                    config.minPointCapacity, config.minRadius,
+                    config.maxPointCapacity, config.maxRadius
+                ],
+                10, ["interpolate", interpolateExpression,
+                    ["to-number",["get", config.capacityField]],
+                    config.minPointCapacity, config.highZoomMinRadius,
+                    config.maxPointCapacity, config.highZoomMaxRadius
+                ]
+            ];
+        }
     } catch (e) {
         console.error("Error setting circle-radius. config.capacityField:", config.capacityField);
         throw e;
     }
-    
     map.addLayer({
         'id': 'assets-points',
         'type': 'circle',
@@ -466,30 +486,65 @@ function addPointLayer() {
     });
     config.layers.push('assets-points');
 
-
     // Add layer with proportional icons
-    map.addLayer({
-        'id': 'assets-symbol', 
-        'type': 'symbol',
-        'source': 'assets-source',
-        'filter': ["==",["geometry-type"],'Point'],
-        ...('tileSourceLayer' in config && {'source-layer': config.tileSourceLayer}),
-        'layout': {
-            'icon-image': ["get", "icon"],
-            'icon-allow-overlap': true,
-            'icon-size': [
-                "interpolate", ["exponential", .5], ["zoom"],
-                1, ['interpolate', interpolateExpression,
-                    ["to-number", ["get", config.capacityField]],
-                    config.minPointCapacity, config.minRadius * 2 / 64,
-                    config.maxPointCapacity, config.maxRadius * 2 / 64],
-                10, ['interpolate', interpolateExpression,
-                    ["to-number", ["get", config.capacityField]],
-                    config.minPointCapacity, config.highZoomMinRadius * 2 / 64,
-                    config.maxPointCapacity, config.highZoomMaxRadius * 2 / 64]
-            ]
-        }
-    });
+    if (config.sqrt === true) {
+        // interpolateExpression = ["exponential", 1.5]
+        // console.log('in sqrt')
+        const sqrtMin = Math.sqrt(config.minPointCapacity);
+        const sqrtMax = Math.sqrt(config.maxPointCapacity);
+        // console.log(sqrtMin, sqrtMax)
+
+        map.addLayer({
+            'id': 'assets-symbol', 
+            'type': 'symbol',
+            'source': 'assets-source',
+            'filter': ["==",["geometry-type"],'Point'],
+            ...('tileSourceLayer' in config && {'source-layer': config.tileSourceLayer}),
+            'layout': {
+                'icon-image': ["get", "icon"],
+                'icon-allow-overlap': true,
+                'icon-size': [
+                    "interpolate", ["linear"], ["zoom"],
+                    1, ['interpolate', interpolateExpression,
+                        ['sqrt',["to-number", ['get', config.capacityField]]],
+                        // ["to-number", ["get", config.capacityField]],
+                        sqrtMin, config.minRadius * 2 / 64,
+                        sqrtMax, config.maxRadius * 2 / 64],
+                    10, ['interpolate', interpolateExpression,
+                        ['sqrt',["to-number", ['get', config.capacityField]]],
+                        // ["to-number", ["get", config.capacityField]],
+                        sqrtMin, config.highZoomMinRadius * 2 / 64,
+                        sqrtMax, config.highZoomMaxRadius * 2 / 64]
+                    ]
+            }
+        });
+    }
+
+    else {
+        // Add layer with proportional icons
+        map.addLayer({
+            'id': 'assets-symbol', 
+            'type': 'symbol',
+            'source': 'assets-source',
+            'filter': ["==",["geometry-type"],'Point'],
+            ...('tileSourceLayer' in config && {'source-layer': config.tileSourceLayer}),
+            'layout': {
+                'icon-image': ["get", "icon"],
+                'icon-allow-overlap': true,
+                'icon-size': [
+                    "interpolate", ["exponential", .5], ["zoom"],
+                    1, ['interpolate', interpolateExpression,
+                        ["to-number", ["get", config.capacityField]],
+                        config.minPointCapacity, config.minRadius * 2 / 64,
+                        config.maxPointCapacity, config.maxRadius * 2 / 64],
+                    10, ['interpolate', interpolateExpression,
+                        ["to-number", ["get", config.capacityField]],
+                        config.minPointCapacity, config.highZoomMinRadius * 2 / 64,
+                        config.maxPointCapacity, config.highZoomMaxRadius * 2 / 64]
+                ]
+            }
+        });
+    }
 
     // Add highlight layer
     paint = config.pointPaint;
@@ -531,6 +586,7 @@ function addPointLayer() {
 }
 function addLineLayer() {
     let paint = config.linePaint;
+
     if ('color' in config) {
         paint["line-color"] = [
             "match",
@@ -541,18 +597,33 @@ function addLineLayer() {
     }
 
     let interpolateExpression = ('interpolate' in config ) ? config.interpolate :  ["linear"];
-    paint['line-width'] = [
-        "interpolate", ["linear"], ["zoom"],
-        1, ["interpolate", interpolateExpression,
-            ["to-number",["get", config.capacityField]],
-            config.minLineCapacity, config.minLineWidth,
+    // Handle case where all capacity values are the same
+    if (config.minLineCapacity === config.maxLineCapacity) {
+        paint['line-width'] = [
+            "interpolate", ["linear"], ["zoom"],
+            1, config.minLineWidth,
+            10, config.highZoomMinLineWidth
+        ];
+    } else {
+        paint['line-width'] = [
+            "interpolate", ["linear"], ["zoom"],
+            1, ["interpolate", interpolateExpression,
+                ["to-number",["get", config.capacityField]],
+                config.minLineCapacity, config.minLineWidth,
+                config.maxLineCapacity, config.maxLineWidth
+            ],
+            10, ["interpolate", interpolateExpression,
+                ["to-number",["get", config.capacityField]],
+                config.minLineCapacity, config.highZoomMinLineWidth,
+                config.maxLineCapacity, config.highZoomMaxLineWidth
+            ]
+        ];
+    }
             config.maxLineCapacity, config.maxLineWidth
-        ],
         10, ["interpolate", interpolateExpression,
             ["to-number",["get", config.capacityField]],
             config.minLineCapacity, config.highZoomMinLineWidth,
             config.maxLineCapacity, config.highZoomMaxLineWidth
-        ],
 
     ];
 
@@ -588,7 +659,7 @@ function addEvents() {
         spinGlobe();
         const bbox = [ [e.point.x - config.hitArea, e.point.y - config.hitArea], [e.point.x + config.hitArea, e.point.y + config.hitArea]];
         const selectedFeatures = getUniqueFeatures(map.queryRenderedFeatures(bbox, {layers: config.layers}), config.linkField).sort((a, b) => a.properties[config.nameField].localeCompare(b.properties[config.nameField]));
-
+        // console.log('selected features' + selectedFeatures)
 
         if (selectedFeatures.length == 0) return;
 
@@ -600,7 +671,6 @@ function addEvents() {
 
         if (selectedFeatures.length == 1) {
             config.selectModal = '';
-
             displayDetails(config.linked[selectedFeatures[0].properties[config.linkField]]);
 
         } else {
@@ -725,6 +795,10 @@ function buildFilters() {
         }
         // this creates the section title and adds the select all feature only to the sections after the first one, if there is no tooltip logic so for all non europe maps
         else if (config.color.field != filter.field) {
+
+            // console.log('here in else if of build filters')
+            // console.log(config.color.field)
+            // console.log(filter.field)
             $('#filter-form').append('<hr /><h7 class="card-title">' + (filter.label || filter.field.replaceAll("_"," ")) + 
             '</div></div></h7> <div class="col-12 text-left small" id="all-select-section-level"><a href="" onclick="selectAllFilterSection(\'' + filter.field + '\'); return false;">select all section</a> | <a href="" onclick="clearAllFilterSection(\'' + filter.field + '\'); return false;">clear all section</a></div>');
         }
@@ -825,6 +899,10 @@ function clearAllFilter(fieldRow) {
 
 }
 
+// ISSUE HERE 
+// only for infra type tab-type 
+// console.log('fieldRow')
+// console.log(fieldRow)
 // for section level select all and clear all
 function clearAllFilterSection(fieldRow) {
     $('.filter-row').each(function() {
@@ -978,6 +1056,7 @@ function filterGeoJSON() {
         for (let field in filterStatus) {
             if (! filterStatus[field].includes(feature.properties[field])) include = false;
         }
+        // filter by text search bar
         if (config.searchText.length >= 3) {
             if (config.selectedSearchFields.split(',').filter((field) => {
                 // remove diacritics from mapValue
@@ -988,9 +1067,9 @@ function filterGeoJSON() {
                     return mapValue.toLowerCase().includes(config.searchText);
                 }}).length == 0) include = false;
         }
-        
+        // filter by country select, gets hit when just filtering by legend too
+
         if (config.selectedCountries.length > 0) {
-            console.log(config.selectedCountries)
             // This checks if any of the selected countries are associated with the project
             try {
                 const projectCountries = feature.properties[config.countryField].split(';').map(country => country.trim());
@@ -1098,7 +1177,6 @@ function createTable() {
             $("#site-style").get(0).sheet.insertRule('td:nth-child(' + (config.tableHeaders.values.indexOf(col)+1) + ') { white-space: nowrap }', 0);
         });        
     }
-    // TODO look into why not converting the integers to string for capacity giomt
     config.table = $('#table').DataTable({
         data: geoJSON2Table().map(row => {
             if ('toLocaleString' in config.tableHeaders) {
@@ -1237,12 +1315,27 @@ function displayDetails(features) {
     let all_details_gist = [];
 
     Object.keys(config.detailView).forEach((detail) => {
+        
         if (features[0].properties[detail] == "" || features[0].properties[detail] == 'unknown' || features[0].properties[detail] == 'undefined' || features[0].properties[detail] ==0 || features[0].properties[detail] == NaN || features[0].properties[detail] == 'nan' || features[0].properties[detail] == null){
             detail_text += ''
         } else if (Object.keys(config.detailView[detail]).includes('display')) {
 
             if (config.detailView[detail]['display'] == 'heading') {
                 detail_text += '<h4>' + features[0].properties[detail] + '</h4>';
+
+            } else if (config.detailView[detail]['display'] == 'simple_markup') {
+                let value = features[0].properties[detail];
+                if (value && value !== '') {
+                    // Extract URL if present
+                    const urlMatch = value.match(/(https?:\/\/[^\s]+)/);
+                    if (urlMatch) {
+                        const url = urlMatch[1];
+                        const textWithoutUrl = value.replace(url, '').trim();
+                        detail_text += '<br/><div>' + textWithoutUrl + ' <a href="' + url + '" target="_blank">' + 'here' + '</a></div>';
+                    } else {
+                        detail_text += '<br/><div>' + value + '</div><br/>';
+                    }
+                }
 
             } else if (config.detailView[detail]['display'] == 'join') {
 
@@ -1345,7 +1438,7 @@ function displayDetails(features) {
             }
 
         } else {
-            if (features[0].properties[detail] != "" && features[0].properties[detail] != 'undefined' && features[0].properties[detail] !=0 && features[0].properties[detail] != NaN && features[0].properties[detail] != 'nan' && features[0].properties[detail] != null && features[0].properties[detail] != 'Unknown [unknown %]' && features[0].properties[detail] != 'unknown') {
+            if (features[0].properties[detail] !== "" && features[0].properties[detail] !== undefined && features[0].properties[detail] !==0 && features[0].properties[detail] !== 'nan' && features[0].properties[detail] !== null && features[0].properties[detail] !== 'Unknown [unknown %]' && features[0].properties[detail] !== 'unknown') {
                 if (config.multiCountry == true && config.detailView[detail] && config.detailView[detail]['label'] && config.detailView[detail]['label'].includes('Country')) {
                     detail_text += '<span class="fw-bold">' + config.detailView[detail]['label'] + '</span>: ' + removeLastComma(features[0].properties[detail]) + '<br/>';
                 }
@@ -1370,47 +1463,135 @@ function displayDetails(features) {
     // Build capacity summary by unit
     // Make sure capacity and parenthese get removed if there is only one feature
     if (capacityLabel != ''){
+
         if (features.length > 1) { 
         let filterIndex = 0;
             for (const[index, filter] of config.filters.entries()) {
-                if (filter.field == config.statusField) {
+                if (filter.field == config.statusField) { 
+
                     filterIndex = index;
                 }
             }
 
         // Initialize capacity and count objects using reduce to avoid summary build bug
-        let capacity = config.filters[filterIndex].values.reduce((acc, f) => {
-            acc[f] = 0;
-            return acc;
-        }, {});
-
-        let count = config.filters[filterIndex].values.reduce((acc, f) => {
-            acc[f] = 0;
-            return acc;
-        }, {});
+        // first builds an array of filter values then with reduce makes it an object
+        // then initializes the start point with 0 though the bug is showing NaN, is it being cached??, because it also shows 2.5 in operating
+        
+        // starting fresh so no reuse of capacity value to prevent bug where some statuses start with NaN or undefined so cannot add any capacity value and shows up as NaN
+        // even though the data is correctly displayed in the table view
+        let capacity = Object.fromEntries(
+            config.filters[filterIndex].values.map(f => [f, 0])
+        );
+        
+        let count = Object.fromEntries(
+            config.filters[filterIndex].values.map(f => [f, 0])
+        );
 
         features.forEach((feature) => {
-            let capacityInt = parseInt(feature.properties[config.capacityDisplayField], 10);
+            let capacityFloat = feature.properties[config.capacityDisplayField]
+            // THIS IS THE ISSUE GGFT
+            // console.log(capacityFloat) // Himeji-Okayama Gas Pipeline
 
-            capacity[feature.properties[config.statusField]] += capacityInt;
+            if (typeof feature.properties[config.capacityDisplayField] === 'string' ){
+                capacityFloat = Number(capacityFloat);
+                // console.log(capacityFloat) // Himeji-Okayama Gas Pipeline
+            } // or typeof === string
+            else {
+                capacityFloat = parseFloat(capacityFloat);
+                // console.log(capacityFloat) // Himeji-Okayama Gas Pipeline
+
+
+            }
+
+            
+            if (typeof capacity[feature.properties[config.statusField]] === 'undefined') {
+                capacity[feature.properties[config.statusField]] = 0
+                // console.log('this is feature.properties[config.statusField]')
+                // console.log(feature.properties[config.statusField])
+            }
+            capacity[feature.properties[config.statusField]] += capacityFloat;
+
+            if (typeof count[feature.properties[config.statusField]] === 'undefined') {
+                count[feature.properties[config.statusField]] = 0
+            }
             count[feature.properties[config.statusField]]++;
 
         });
 
             let detail_capacity = '';
-
             Object.keys(count).forEach((k) => {
-                if (config.color.field == config.statusField){ 
-                    if (count[k] != 0) {
-                        detail_capacity += '<div class="row"><div class="col-5"><span class="legend-dot" style="background-color:' + config.color.values[k] + '"></span>' + k + '</div><div class="col-4">' + Number(capacity[k]).toLocaleString() + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
-                    }
+                
+                // here do the status legend mapping to an appopriate status display 
+                /* 
+                OR TODO make a dictionary look up to not map status to display because there will be a different count.. but just rename any with / 
+
+                Proposed/Announced/Discovered
+                Mothballed/Idle/Shut in
+                Construction/In development
+                Retired/Closed/Decommissioned
+
+                */
+                // console.log(k)
+                if (k === 'proposed-plus'){
+                    display_k = 'proposed/announced/<br>discovered';
+                }
+                else if (k === 'mothballed-plus'){
+                    display_k = 'mothballed/idle/shut in';
+                }
+                else if (k === 'construction-plus'){
+                    display_k = 'construction/in development'
+                }
+                else if (k === 'retired-plus'){
+                    display_k = 'retired/closed/<br>decommissioned';
                 }
                 else {
-                    if (count[k] != 0) {
-                        detail_capacity += '<div class="row"><div class="col-5">' + k + '</div><div class="col-4">' + Number(capacity[k]).toLocaleString() + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
+                    display_k = k;
+                }
+                // console.log(display_k)
+
+                // console.log('This is capacity... find out how to make 0 that is really "" be Not found')
+                // console.log(capacity[k]) // it is a dictionary, the key is the status k, so if a value is 0 ... but what if it is truly 0 not Not found
+
+
+                if (capacity[k] === 0){
+                    if (config.color.field == config.statusField){ 
+                        if (count[k] != 0) {
+                            // console.log('this is k when config.color.field == config.statusDisplayField') // TODO I need to have a dictionary to reverse from status-legend to status Display so we can still 
+                            // filter by status legend but show the status display via k 
+                            // console.log(k)
+                            detail_capacity += '<div class="row"><div class="col-5"><span class="legend-dot" style="background-color:' + config.color.values[k] + '"></span>' + display_k + '</div><div class="col-4">' + 'Not found or N/A' + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
+                        }
+                    }
+                    else {
+                        if (count[k] != 0) {
+                            // console.log('this is k when config.color.field DOES NOT EQUAL config.statusDisplayField')
+                            // console.log(k)
+                            detail_capacity += '<div class="row"><div class="col-5">' + display_k + '</div><div class="col-4">' + 'Not found or N/A' + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
+                        }
+                    }                    
+                }
+                else {
+                    if (config.color.field == config.statusField){ 
+                        if (count[k] != 0) {
+                            // console.log('this is k when config.color.field == config.statusDisplayField') // TODO I need to have a dictionary to reverse from status-legend to status Display so we can still 
+                            // filter by status legend but show the status display via k 
+                            // console.log(k)
+                            detail_capacity += '<div class="row"><div class="col-5"><span class="legend-dot" style="background-color:' + config.color.values[k] + '"></span>' + display_k + '</div><div class="col-4">' + Number(capacity[k]).toLocaleString() + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
+                        }
+                    }
+                    else {
+                        if (count[k] != 0) {
+                            // console.log('this is k when config.color.field DOES NOT EQUAL config.statusDisplayField')
+                            // console.log(k)
+                            detail_capacity += '<div class="row"><div class="col-5">' + display_k + '</div><div class="col-4">' + Number(capacity[k]).toLocaleString() + '</div><div class="col-3">' + count[k] + " of " + features.length + "</div></div>";
+                        }
                     }
                 }
             });
+            // special for GGFT ... should change the variable name in the script to be status not finstatus I suppose.
+            if (config.statusDisplayField === 'finstatus'){
+                config.statusDisplayField = 'Status'
+            }
             detail_text += '<div>' + 
                 '<div class="row pt-2 justify-content-md-center">Total ' + assetLabel + ': ' + features.length + '</div>' +
                 '<div class="row" style="height: 2px"><hr/></div>' +
@@ -1421,23 +1602,50 @@ function displayDetails(features) {
         // else when there is only one feature or one unit per project in the popup modal
         else {
 
-            // this handles capacity adjustment for solo projects where it looks redundant to have Capacity written out twice
-            // Remove 'Capacity' prefix and parentheses from capacityLabel
-            capacityLabel = capacityLabel.replace(/^Capacity\s*/i, '').replace(/[()]/g, '');
-
-            // and it allows status outside of the summary table to have the colored dot when status is the highest filter section
-            if (config.color.field != config.statusDisplayField){
-                // for filter field in filter, if primary = True then take field name "type" in intg and use it to find the color dictionary in the colors dict above
-                // and then display the projects type field with the appropriate color based on the value and the dictionary
+            // if ggft gas finance then we want to override this always since the project level financing info is already printed 
+            // and this else only executes if there is just one unit for the project so it'd be redundant and the word 'Capacity' is hardcoded in this feature and makes no sense for ggft
+            if (config.scale_by_capacity==false) {
+                console.log('Skipping single unit project capacity for ggft since it is finance info and is covered already, but displaying status info since it is useful and not redundant.')
+                // we do not want the capacity but we do want status since that is relevant for single unit ggft projects
+                // since we know for ggft the status is a color field we do not need the extra logic seen below with "config.color.field != config.statusDisplayField"
                 detail_text += '<span class="fw-bold text-capitalize">Status</span>: ' +
-                '<span class="text-capitalize">' + features[0].properties[config.statusDisplayField] + '</span><br/>';
-                detail_text += '<span class="fw-bold text-capitalize">Capacity</span>: ' + parseInt(features[0].properties[config.capacityDisplayField], 10).toLocaleString() + ' ' + capacityLabel;
+                '<span class="legend-dot" style="background-color:' + config.color.values[ features[0].properties[config.statusDisplayField] ] + '"></span><span class="text-capitalize">' + features[0].properties[config.statusDisplayField] + '</span><br/>';
+
             }
             else {
-                detail_text += '<span class="fw-bold text-capitalize">Status</span>: ' +
-                    '<span class="legend-dot" style="background-color:' + config.color.values[ features[0].properties[config.statusDisplayField] ] + '"></span><span class="text-capitalize">' + features[0].properties[config.statusDisplayField] + '</span><br/>';
-                detail_text += '<span class="fw-bold text-capitalize">Capacity</span>: ' + parseInt(features[0].properties[config.capacityDisplayField], 10).toLocaleString() + ' ' + capacityLabel;
-            }
+
+                capacityFloat = Number(features[0].properties[config.capacityDisplayField])
+
+                // if capacity is a string and when you convert with Number it is 0 then we can say it is NA or Not found
+                if (features[0].properties[config.capacityDisplayField] === ''){
+                        capacityFloatandLabel = 'Not found or N/A'
+                }
+
+                // if it is not a string then we are good ...  
+                else { 
+                    // console.log(capacityFloat) // Himeji-Okayama Gas Pipeline
+                    // try Number() instead of parseFloat()
+                    capacityFloatandLabel = parseFloat(capacityFloat).toFixed(2).replace(/\.?0+$/, '') + ' ' + capacityLabel
+                    // console.log(capacityFloatandLabel)
+                }
+                // this handles capacity adjustment for solo projects where it looks redundant to have Capacity written out twice
+                // Remove 'Capacity' prefix and parentheses from capacityLabel TODO look into a better way to handle, issue if capacity is nan or undefined like intentionally is for GOGET
+                // capacityLabel = capacityLabel.replace(/^Capacity\s*/i, '').replace(/[()]/g, '');
+
+                // and it allows status outside of the summary table to have the colored dot when status is the highest filter section
+                if (config.color.field != config.statusDisplayField){
+                    // for filter field in filter, if primary = True then take field name "type" in intg and use it to find the color dictionary in the colors dict above
+                    // and then display the projects type field with the appropriate color based on the value and the dictionary
+                    detail_text += '<span class="fw-bold text-capitalize">Status</span>: ' +
+                    '<span class="text-capitalize">' + features[0].properties[config.statusDisplayField] + '</span><br/>';
+                    detail_text += '<span class="fw-bold text-capitalize">Capacity</span>: ' + capacityFloatandLabel;
+                }
+                else {
+                    detail_text += '<span class="fw-bold text-capitalize">Status</span>: ' +
+                        '<span class="legend-dot" style="background-color:' + config.color.values[ features[0].properties[config.statusDisplayField] ] + '"></span><span class="text-capitalize">' + features[0].properties[config.statusDisplayField] + '</span><br/>';
+                    detail_text += '<span class="fw-bold text-capitalize">Capacity</span>: ' + capacityFloatandLabel;
+                }
+                }
             }
     }
     // This is where you remove the colored circle primary = true
@@ -1628,15 +1836,6 @@ function buildCountrySelect() {
     config.selectedCountryText = '';
 }
 
-const diacriticMap = {
-    a: ["a", "á", "à", "â", "ã", "ä", "å"],
-    e: ["e", "é", "è", "ê", "ë"],
-    i: ["i", "í", "ì", "î", "ï"],
-    o: ["o", "ó", "ò", "ô", "õ", "ö", "ø"],
-    u: ["u", "ú", "ù", "û", "ü"],
-    c: ["c", "ç"],
-    n: ["n", "ñ"],
-  };
   
 // this removes diacritics in the data so that when you search you get all the possible options ignored special diacritics
 // this is applied so that only the non tile maps are impacted
@@ -1814,7 +2013,7 @@ const maxSpinZoom = 5;
 const slowSpinZoom = 3;
 
 
-let userInteracting = false;
+// let userInteracting = false;
 let spinEnabled = true;
 
 // the function in charge of spinning the globe projection of the map
@@ -1839,6 +2038,15 @@ function spinGlobe() {
         }
     }
 }
+
+function getStandardDeviation (array) {
+    if (!array || array.length === 0) {return 0;}
+
+    const n = array.length
+    const mean = array.reduce((a, b) => a + b) / n
+    return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n)
+    }
+
 
 
 map.on('moveend', () => {
