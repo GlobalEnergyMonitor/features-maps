@@ -1,7 +1,7 @@
 var config = {
     geometries: ['Point','LineString'],
 
-    json: 'compilation_output/ggit_2025-05-01.geojson', //'data/ggit_2024-12-20.geojson',
+    geojson: 'compilation_output/ggit_2025-05-01.geojson', //'data/ggit_2024-12-20.geojson',
     color: {
         field: 'status-legend',
         values: {
@@ -61,6 +61,7 @@ var config = {
     //         'GGIT-export': 'trains',            
     //     }
     // },
+    countryField: 'areas',
     nameField: 'name', 
     tableHeaders: {
         values: ['name','unit-name', 'owner', 'parent', 'capacity-table', 'units-of-m', 'status', 'region', 'areas', 'subnat', 'start-year', 'tracker-display'],

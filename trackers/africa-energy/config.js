@@ -1,5 +1,5 @@
 var config = {
-    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/africa/2025-08/africa_map_2025-08-27.geojson', //'compilation_output/africa_2025-04-29.geojson',
+    geojson: 'https://publicgemdata.nyc3.cdn.digitaloceanspaces.com/africa/2025-09/africa-energy_map_2025-09-23.geojson', 
     geometries: ['Point','LineString'],
     center: [15, 0],
     zoomFactor: 1,
@@ -174,7 +174,6 @@ var config = {
         'parent': {'label': 'Parent'},
         'river': {'label': 'River'},
         'tracker-display': {'label': 'Type'},
-        'areas': {'label': 'Country/Area(s)'},
         'areas-subnat-sat-display': {'display': 'location'}, 
     },
 

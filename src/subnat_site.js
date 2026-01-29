@@ -5,9 +5,9 @@ function processConfig() {
     config.baseMap = "Streets";
     config.icons = [];
 
-    Object.keys(config.color.values).forEach((color_key) => {
-        config.color.values[color_key] = config.colors[ config.color.values[color_key] ];
-    });
+    // Object.keys(config.color.values).forEach((color_key) => {
+    //     config.color.values[color_key] = config.colors[ config.color.values[color_key] ];
+    // });
 }
 
 /*
@@ -28,16 +28,7 @@ const popup = new mapboxgl.Popup({
     closeOnClick: false
 });
 
-//if config.featuresMap.subnat in config then ... create regional maps, slide thru to see them all, review, show table of all 
-// data
-
-
 map.on('load', function () {
-    // if (config.projection != 'globe'){
-    //     // map.setFog({}); // Set the default atmosphere style
-    //     // $('#btn-spin-toggle').hide();
-
-    // }
     loadData();
 });
 function determineZoom() {
@@ -53,7 +44,6 @@ function determineZoom() {
   load data in various formats, and prepare for use in application
 */
 function loadData() {
-    // if tiles (gipt) use json and csv files
     if ("tiles" in config) {
         console.log('addTiles');
         addTiles();
@@ -81,7 +71,7 @@ function loadData() {
         //     file,
         //     rowFormat: 'object',
         //     onComplete: data => console.log(data),
-        //   }) 
+        //   })
     } else if ("geojson" in config) {
         $.ajax({
             type: "GET",
@@ -145,10 +135,10 @@ function addGeoJSON(jsonData) {
     // Now that GeoJSON is created, store in processedGeoJSON, and link assets, then add layers to the map
     config.processedGeoJSON = config.geojson; // copy
 
-    console.log('setMinMax');
-    setMinMax(); 
-    console.log('findLinkedAssets');
-    findLinkedAssets(); 
+    // console.log('setMinMax');
+    // setMinMax(); 
+    // console.log('findLinkedAssets');
+    // findLinkedAssets(); 
 
     // map.addSource('assets-source', {
     //     'type': 'geojson',
@@ -374,9 +364,9 @@ function enableUX() {
     config.UXEnabled = true;
     
     console.log('buildFilters');
-    buildFilters();
+    // buildFilters();
     console.log('updateSummary');
-    updateSummary();
+    // updateSummary();
     console.log('buildTable');
     buildTable(); 
     console.log('enableModal');
@@ -396,6 +386,8 @@ function addLayers() {
     config.layers = [];
     if (config.geometries.includes('LineString')) addLineLayer();
     if (config.geometries.includes('Point')) addPointLayer();
+    if (config.geometries.includes('MultiPolygon')) addPolygonLayer();
+
 
     map.addLayer({
         id: 'satellite',
@@ -435,25 +427,25 @@ function addPointLayer() {
             "#000000"
         ];
     }
-    let interpolateExpression = ('interpolate' in config ) ? config.interpolate :  ["linear"];
-    try {
-        paint['circle-radius'] = [
-            "interpolate", ["exponential", .5], ["zoom"],
-            1, ["interpolate", interpolateExpression,
-                ["to-number",["get", config.capacityField]],
-                config.minPointCapacity, config.minRadius,
-                config.maxPointCapacity, config.maxRadius
-            ],
-            10, ["interpolate", interpolateExpression,
-                ["to-number",["get", config.capacityField]],
-                config.minPointCapacity, config.highZoomMinRadius,
-                config.maxPointCapacity, config.highZoomMaxRadius
-            ],
-        ];
-    } catch (e) {
-        console.error("Error setting circle-radius. config.capacityField:", config.capacityField);
-        throw e;
-    }
+    // let interpolateExpression = ('interpolate' in config ) ? config.interpolate :  ["linear"];
+    // try {
+    //     paint['circle-radius'] = [
+    //         "interpolate", ["exponential", .5], ["zoom"],
+    //         1, ["interpolate", interpolateExpression,
+    //             ["to-number",["get", config.capacityField]],
+    //             config.minPointCapacity, config.minRadius,
+    //             config.maxPointCapacity, config.maxRadius
+    //         ],
+    //         10, ["interpolate", interpolateExpression,
+    //             ["to-number",["get", config.capacityField]],
+    //             config.minPointCapacity, config.highZoomMinRadius,
+    //             config.maxPointCapacity, config.highZoomMaxRadius
+    //         ],
+    //     ];
+    // } catch (e) {
+    //     console.error("Error setting circle-radius. config.capacityField:", config.capacityField);
+    //     throw e;
+    // }
     
     map.addLayer({
         'id': 'assets-points',
@@ -468,28 +460,28 @@ function addPointLayer() {
 
 
     // Add layer with proportional icons
-    map.addLayer({
-        'id': 'assets-symbol', 
-        'type': 'symbol',
-        'source': 'assets-source',
-        'filter': ["==",["geometry-type"],'Point'],
-        ...('tileSourceLayer' in config && {'source-layer': config.tileSourceLayer}),
-        'layout': {
-            'icon-image': ["get", "icon"],
-            'icon-allow-overlap': true,
-            'icon-size': [
-                "interpolate", ["exponential", .5], ["zoom"],
-                1, ['interpolate', interpolateExpression,
-                    ["to-number", ["get", config.capacityField]],
-                    config.minPointCapacity, config.minRadius * 2 / 64,
-                    config.maxPointCapacity, config.maxRadius * 2 / 64],
-                10, ['interpolate', interpolateExpression,
-                    ["to-number", ["get", config.capacityField]],
-                    config.minPointCapacity, config.highZoomMinRadius * 2 / 64,
-                    config.maxPointCapacity, config.highZoomMaxRadius * 2 / 64]
-            ]
-        }
-    });
+    // map.addLayer({
+    //     'id': 'assets-symbol', 
+    //     'type': 'symbol',
+    //     'source': 'assets-source',
+    //     'filter': ["==",["geometry-type"],'Point'],
+    //     ...('tileSourceLayer' in config && {'source-layer': config.tileSourceLayer}),
+    //     'layout': {
+    //         'icon-image': ["get", "icon"],
+    //         'icon-allow-overlap': true,
+    //         'icon-size': [
+    //             "interpolate", ["exponential", .5], ["zoom"],
+    //             1, ['interpolate', interpolateExpression,
+    //                 ["to-number", ["get", config.capacityField]],
+    //                 config.minPointCapacity, config.minRadius * 2 / 64,
+    //                 config.maxPointCapacity, config.maxRadius * 2 / 64],
+    //             10, ['interpolate', interpolateExpression,
+    //                 ["to-number", ["get", config.capacityField]],
+    //                 config.minPointCapacity, config.highZoomMinRadius * 2 / 64,
+    //                 config.maxPointCapacity, config.highZoomMaxRadius * 2 / 64]
+    //         ]
+    //     }
+    // });
 
     // Add highlight layer
     paint = config.pointPaint;
@@ -529,6 +521,32 @@ function addPointLayer() {
         }
     );
 }
+function addPolygonLayer(){
+//     'id': 'my-multipolygon-layer',
+//     'type': 'fill',
+//     'source': 'my-multipolygon-source',
+//     'paint': {
+//         'fill-color': '#007cbf', // Customize the fill color
+//         'fill-opacity': 0.7
+//     }
+// });
+// }
+    polygonPaint =  {
+        'fill-color': '#007cbf', // Customize the fill color
+        'fill-opacity': 0.7
+    }
+
+    map.addLayer({
+        'id': 'assets-polygons',
+        'type': 'fill',
+        'source': 'assets-source',
+        'layout': {},
+        'paint': polygonPaint
+
+    })
+    config.layers.push('assets-polygons');
+}
+
 function addLineLayer() {
     let paint = config.linePaint;
     if ('color' in config) {
@@ -596,7 +614,7 @@ function addEvents() {
             (feature) => feature.properties[config.linkField]
         );
 
-        setHighlightFilter(links);
+        // setHighlightFilter(links);
 
         if (selectedFeatures.length == 1) {
             config.selectModal = '';
@@ -624,7 +642,7 @@ function addEvents() {
     config.layers.forEach(layer => {
         map.on('mouseenter', layer, (e) => {
             map.getCanvas().style.cursor = 'pointer';
-            const coordinates = (map.getLayer(layer).type == "line" ? e.lngLat : e.features[0].geometry.coordinates.slice());
+            const coordinates = (map.getLayer(layer).type == "polygon" ? e.lngLat : e.features[0].geometry.coordinates.slice());
             const description = e.features[0].properties[config.nameField];
             popup.setLngLat(coordinates).setHTML(description).addTo(map);
         });
@@ -1171,30 +1189,30 @@ function geoJSON2Headers() {
 function enableModal() {
     config.modal = new bootstrap.Modal($('#modal'));
     $('#modal').on('hidden.bs.modal', function (event) {
-        setHighlightFilter('');
+        // setHighlightFilter('');
     })
 }
-function setHighlightFilter(links) {
-    if (! Array.isArray(links)) links = [links];
-    let filter;
-    let highlightExpression = [
-        'in',
-        ["get", config.linkField],
-        ["literal", links]
-    ];
-    if (config.filterExpression != null) {
-        filter = JSON.parse(JSON.stringify(config.filterExpression));
-        filter.push(highlightExpression);
-    } else {
-        filter = ['all', highlightExpression];
-    }
-    config.layers.forEach(layer => {
-        filter.push(["==",["geometry-type"],
-            map.getLayer(layer).type == "line" ? "LineString" : "Point"
-        ]);
-        map.setFilter(layer + '-highlighted',filter);
-    });
-}
+// function setHighlightFilter(links) {
+//     if (! Array.isArray(links)) links = [links];
+//     let filter;
+//     let highlightExpression = [
+//         'in',
+//         ["get", config.linkField],
+//         ["literal", links]
+//     ];
+//     if (config.filterExpression != null) {
+//         filter = JSON.parse(JSON.stringify(config.filterExpression));
+//         filter.push(highlightExpression);
+//     } else {
+//         filter = ['all', highlightExpression];
+//     }
+//     config.layers.forEach(layer => {
+//         filter.push(["==",["geometry-type"],
+//             map.getLayer(layer).type == "line" ? "LineString" : "Point"
+//         ]);
+//         map.setFilter(layer + '-highlighted',filter);
+//     });
+// }
 
 
 // TODO Move the table creation logic into a helper function
@@ -1480,7 +1498,7 @@ function displayDetails(features) {
         '<div class="col-sm-7 py-2" id="total_in_view">' + detail_text + '</div>' +
         '</div>');
 
-    setHighlightFilter(features[0].properties[config.linkField]);
+    // setHighlightFilter(features[0].properties[config.linkField]);
 }
 
 function buildSatImage(features) {
@@ -1497,7 +1515,7 @@ function buildSatImage(features) {
 }
 function showAllPhases(link) {
     config.modal.hide();
-    setHighlightFilter(link);
+    // setHighlightFilter(link);
     var bbox = geoJSONBBox({'type': 'FeatureCollection', features: config.linked[link] });
     map.flyTo({center: [(bbox[0]+bbox[2])/2,(bbox[1]+bbox[3])/2], zoom: config.phasesZoom});
 }
